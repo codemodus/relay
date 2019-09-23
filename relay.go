@@ -1,3 +1,7 @@
+// Package relay provides a simple mechanism for relaying control flow based
+// upon whether a checked error is nil or not. This mechanism requires special
+// setup within an application due to the behavior of the builtin function
+// recover(). Please review the provided examples to ensure correct usage.
 package relay
 
 import (
@@ -6,17 +10,17 @@ import (
 	"path"
 )
 
-type Handler func(error)
-
+// Relay tracks an error and a related error handler.
 type Relay struct {
 	err error
-	h   Handler
+	h   func(error)
 }
 
-func New(hs ...Handler) *Relay {
+// New constructs a new *Relay.
+func New(handler ...func(error)) *Relay {
 	h := Handle
-	if hs != nil && len(hs) > 0 {
-		h = hs[0]
+	if handler != nil && len(handler) > 0 {
+		h = handler[0]
 	}
 
 	return &Relay{
@@ -24,7 +28,10 @@ func New(hs ...Handler) *Relay {
 	}
 }
 
-func (r *Relay) E(err error) {
+// Check will do nothing if the error argument is nil. Otherwise, it kicks-off
+// an event that should be handled by a wrapped and deferred call to
+// r.Filter(recover()).
+func (r *Relay) Check(err error) {
 	if err == nil {
 		return
 	}
@@ -34,6 +41,23 @@ func (r *Relay) E(err error) {
 	panic(r)
 }
 
+// CodedCheck will do nothing if the error argument is nil. Otherwise, it
+// kicks-off an event that should be handled by a deferred and wrapped call to
+// r.Filter(recover()). Any provided error will be wrapped in a CodedError
+// instance in order to trigger special behavior in the default error handler.
+func (r *Relay) CodedCheck(code int, err error) {
+	if err == nil {
+		return
+	}
+
+	r.Check(&CodedError{err, code})
+}
+
+// Filter should be wrapped and deferred before any usage of the receiver
+// occurs. The argument should be a call to the recover() builtin. If no panic
+// has been triggered, Filter will do nothing. Otherwise, it will handle the
+// currently set err. If the argument value is not recognized, the value is
+// passed into an additional panic() call.
 func (r *Relay) Filter(v interface{}) {
 	if v == nil {
 		return
@@ -46,34 +70,54 @@ func (r *Relay) Filter(v interface{}) {
 	r.h(r.err)
 }
 
+// Coder describes any type that can return an error code.
+type Coder interface {
+	Code() int
+}
+
+// Handle is the default error handler. It will print "{cmd_name}: {err_msg}"
+// to stderr and then call os.Exit. If the handled error happens to satisfy the
+// Coder interface, that value will be used as the exit code. Otherwise, 1 will
+// be used.
 func Handle(err error) {
+	if err == nil {
+		return
+	}
+
 	cmd := path.Base(os.Args[0])
 	fmt.Fprintf(os.Stderr, "%s: %v\n", cmd, err)
 
 	code := 1
-
-	if coder, ok := err.(interface{ Code() int }); ok {
-		code = coder.Code()
+	if c, ok := err.(Coder); ok {
+		code = c.Code()
 	}
 
 	os.Exit(code)
 }
 
-type codedError struct {
-	error
-	code int
+// CodedError is a simple implementaion of the Coder interface.
+type CodedError struct {
+	Err error
+	C   int
 }
 
-func (ce *codedError) Code() int {
-	return ce.code
+// Error satisfies the error interface.
+func (ce *CodedError) Error() string {
+	return ce.Err.Error()
 }
 
-func CodedEFunc(r *Relay) func(error, int) {
-	return func(err error, code int) {
-		if err == nil {
-			return
-		}
+// Code satisfies the Coder interface.
+func (ce *CodedError) Code() int {
+	return ce.C
+}
 
-		r.E(&codedError{err, code})
-	}
+// Fns is a convenience method which returns the Check and Filter functions.
+func (r *Relay) Fns() (check func(error), filter func(interface{})) {
+	return r.Check, r.Filter
+}
+
+// CodedFns is a convenience method which returns the CodedCheck and Filter
+// functions.
+func (r *Relay) CodedFns() (codedCheck func(int, error), filter func(interface{})) {
+	return r.CodedCheck, r.Filter
 }
