@@ -29,8 +29,8 @@ func New(handler ...func(error)) *Relay {
 }
 
 // Check will do nothing if the error argument is nil. Otherwise, it kicks-off
-// an event that should be handled by a wrapped and deferred call to
-// r.Filter(recover()).
+// an event (i.e. the relay is "tripped") and should be handled by a deferred
+// and wrapped call to r.Filter(recover()).
 func (r *Relay) Check(err error) {
 	if err == nil {
 		return
@@ -42,9 +42,10 @@ func (r *Relay) Check(err error) {
 }
 
 // CodedCheck will do nothing if the error argument is nil. Otherwise, it
-// kicks-off an event that should be handled by a deferred and wrapped call to
-// r.Filter(recover()). Any provided error will be wrapped in a CodedError
-// instance in order to trigger special behavior in the default error handler.
+// kicks-off an event (i.e. the relay is "tripped") and should be handled by a
+// deferred and wrapped call to r.Filter(recover()). Any provided error will be
+// wrapped in a CodedError instance in order to trigger special behavior in the
+// default error handler.
 func (r *Relay) CodedCheck(code int, err error) {
 	if err == nil {
 		return
