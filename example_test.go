@@ -13,6 +13,7 @@ func Example() {
 
 	err := fail()
 	r.Check(err)
+
 	// prints "{cmd_name}: {err_msg}" to stderr
 	// calls os.Exit with code set as 1
 }
@@ -45,6 +46,7 @@ func Example_easedUsage() {
 
 	err := fail()
 	ce(err)
+
 	// prints "{cmd_name}: {err_msg}" to stderr
 	// calls os.Exit with code set as 1
 }
@@ -55,6 +57,7 @@ func ExampleRelay_CodedCheck() {
 
 	err := fail()
 	r.CodedCheck(3, err)
+
 	// prints "{cmd_name}: {err_msg}" to stderr
 	// calls os.Exit with code set as first arg to r.CodedCheck
 }
@@ -65,6 +68,7 @@ func ExampleRelay_Fns() {
 
 	err := fail()
 	ce(err)
+
 	// prints "{cmd_name}: {err_msg}" to stderr
 	// calls os.Exit with code set as 1
 }
@@ -75,6 +79,7 @@ func ExampleRelay_CodedFns() {
 
 	err := fail()
 	ce(3, err)
+
 	// prints "{cmd_name}: {err_msg}" to stderr
 	// calls os.Exit with code set as first arg to ce
 }
@@ -86,8 +91,45 @@ func ExampleCoder() {
 	err := fail()
 	cerr := &relay.CodedError{err, 2} // satisfies the Coder interface
 	r.Check(cerr)
+
 	// prints "{cmd_name}: {err_msg}" to stderr
 	// calls os.Exit with code set as cerr.Code() return value
+}
+
+func ExampleTripFn() {
+	check, filter := relay.New().Fns()
+	trip := relay.TripFn(check)
+	defer func() { filter(recover()) }()
+
+	n := three()
+	if n != 2 {
+		trip("must receive %v: %v is invalid", 2, n)
+	}
+
+	fmt.Println("should not print")
+
+	// prints "{cmd_name}: {trip_msg}" to stderr
+	// calls os.Exit with code set as 1
+}
+
+func ExampleCodedTripFn() {
+	check, filter := relay.New().CodedFns()
+	trip := relay.CodedTripFn(check)
+	defer func() { filter(recover()) }()
+
+	n := three()
+	if n != 2 {
+		trip(4, "must receive %v: %v is invalid", 2, n)
+	}
+
+	fmt.Println("should not print")
+
+	// prints "{cmd_name}: {trip_msg}" to stderr
+	// calls os.Exit with code set as first arg to "trip"
+}
+
+func three() int {
+	return 3
 }
 
 func fail() error {

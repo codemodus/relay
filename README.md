@@ -10,7 +10,9 @@ recover(). Please review the provided examples to ensure correct usage.
 ## Usage
 
 ```go
+func CodedTripFn(check func(int, error)) func(int, string, ...interface{})
 func Handle(err error)
+func TripFn(check func(error)) func(string, ...interface{})
 type CodedError
     func (ce *CodedError) Code() int
     func (ce *CodedError) Error() string
@@ -86,6 +88,24 @@ func main() {
     r.CodedCheck(3, err)
     // prints "{cmd_name}: {err_msg}" to stderr
     // calls os.Exit with code set as first arg to r.CodedCheck
+```
+
+### Setup (Trip Function)
+
+```go
+    check, filter := relay.New().Fns()
+    trip := relay.TripFn(check)
+    defer func() { filter(recover()) }()
+
+    n := three()
+    if n != 2 {
+        trip("must receive %v: %v is invalid", 2, n)
+    }
+
+    fmt.Println("should not print")
+
+    // prints "{cmd_name}: {trip_msg}" to stderr
+    // calls os.Exit with code set as 1
 ```
 
 ## More Info

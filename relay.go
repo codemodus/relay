@@ -122,3 +122,20 @@ func (r *Relay) Fns() (check func(error), filter func(interface{})) {
 func (r *Relay) CodedFns() (codedCheck func(int, error), filter func(interface{})) {
 	return r.CodedCheck, r.Filter
 }
+
+// TripFn wraps the provided check function so that it can be called with a
+// formatted error. This enables the immediate triggering of the related relay.
+func TripFn(check func(error)) func(string, ...interface{}) {
+	return func(format string, args ...interface{}) {
+		check(fmt.Errorf(format, args...))
+	}
+}
+
+// CodedTripFn wraps the provided codedCheck function so that it can be called
+// with an exit code and formatted error. This enables the immediate triggering
+// of the related relay.
+func CodedTripFn(codedCheck func(int, error)) func(int, string, ...interface{}) {
+	return func(code int, format string, args ...interface{}) {
+		codedCheck(code, fmt.Errorf(format, args...))
+	}
+}
