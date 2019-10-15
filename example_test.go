@@ -22,12 +22,11 @@ func Example() {
 func Example_customHandler() {
 	h := func(err error) {
 		fmt.Println(err)
+		fmt.Println("extra message")
 	}
 
 	r := relay.New(h)
 	defer func() { r.Filter(recover()) }()
-
-	defer fmt.Println("reached")
 
 	err := fail()
 	r.Check(err)
@@ -35,8 +34,8 @@ func Example_customHandler() {
 	fmt.Println("should not print")
 
 	// Output:
-	// reached
 	// always fails
+	// extra message
 }
 
 // Convenience methods for eased usage.

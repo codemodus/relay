@@ -39,6 +39,7 @@ func main() {
 
     err := fail()
     r.Check(err)
+
     // prints "{cmd_name}: {err_msg}" to stderr
     // calls os.Exit with code set as 1
 }
@@ -49,12 +50,11 @@ func main() {
 ```go
     h := func(err error) {
         fmt.Println(err)
+        fmt.Println("extra message")
     }
 
     r := relay.New(h)
     defer func() { r.Filter(recover()) }()
-
-    defer fmt.Println("reached")
 
     err := fail()
     r.Check(err)
@@ -62,8 +62,8 @@ func main() {
     fmt.Println("should not print")}
 
     // Output:
-    // reached
     // always fails
+    // extra message
 ```
 
 ### Setup (Eased Usage)
@@ -74,6 +74,7 @@ func main() {
 
     err := fail()
     check(err)
+
     // prints "{cmd_name}: {err_msg}" to stderr
     // calls os.Exit with code set as 1
 ```
@@ -86,6 +87,7 @@ func main() {
 
     err := fail()
     r.CodedCheck(3, err)
+
     // prints "{cmd_name}: {err_msg}" to stderr
     // calls os.Exit with code set as first arg to r.CodedCheck
 ```
