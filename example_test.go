@@ -9,7 +9,7 @@ import (
 
 func Example() {
 	r := relay.New()
-	defer func() { r.Filter(recover()) }()
+	defer relay.Handle()
 
 	err := fail()
 	r.Check(err)
@@ -26,7 +26,7 @@ func Example_customHandler() {
 	}
 
 	r := relay.New(h)
-	defer func() { r.Filter(recover()) }()
+	defer relay.Handle()
 
 	err := fail()
 	r.Check(err)
@@ -38,13 +38,13 @@ func Example_customHandler() {
 	// extra message
 }
 
-// Convenience methods for eased usage.
+// Store check method for convenience.
 func Example_easedUsage() {
-	ce, filter := relay.New().Fns()
-	defer func() { filter(recover()) }()
+	ck := relay.New().Check
+	defer relay.Handle()
 
 	err := fail()
-	ce(err)
+	ck(err)
 
 	// prints "{cmd_name}: {err_msg}" to stderr
 	// calls os.Exit with code set as 1
@@ -52,7 +52,7 @@ func Example_easedUsage() {
 
 func ExampleRelay_CodedCheck() {
 	r := relay.New()
-	defer func() { r.Filter(recover()) }()
+	defer relay.Handle()
 
 	err := fail()
 	r.CodedCheck(3, err)
@@ -61,44 +61,10 @@ func ExampleRelay_CodedCheck() {
 	// calls os.Exit with code set as first arg to r.CodedCheck
 }
 
-func ExampleRelay_Fns() {
-	ce, filter := relay.New().Fns()
-	defer func() { filter(recover()) }()
-
-	err := fail()
-	ce(err)
-
-	// prints "{cmd_name}: {err_msg}" to stderr
-	// calls os.Exit with code set as 1
-}
-
-func ExampleRelay_CodedFns() {
-	ce, filter := relay.New().CodedFns()
-	defer func() { filter(recover()) }()
-
-	err := fail()
-	ce(3, err)
-
-	// prints "{cmd_name}: {err_msg}" to stderr
-	// calls os.Exit with code set as first arg to ce
-}
-
-func ExampleCoder() {
-	r := relay.New()
-	defer func() { r.Filter(recover()) }()
-
-	err := fail()
-	cerr := &relay.CodedError{err, 2} // satisfies the Coder interface
-	r.Check(cerr)
-
-	// prints "{cmd_name}: {err_msg}" to stderr
-	// calls os.Exit with code set as cerr.Code() return value
-}
-
 func ExampleTripFn() {
-	check, filter := relay.New().Fns()
-	trip := relay.TripFn(check)
-	defer func() { filter(recover()) }()
+	ck := relay.New().Check
+	trip := relay.TripFn(ck)
+	defer relay.Handle()
 
 	n := three()
 	if n != 2 {
@@ -112,9 +78,9 @@ func ExampleTripFn() {
 }
 
 func ExampleCodedTripFn() {
-	check, filter := relay.New().CodedFns()
-	trip := relay.CodedTripFn(check)
-	defer func() { filter(recover()) }()
+	ck := relay.New().CodedCheck
+	trip := relay.CodedTripFn(ck)
+	defer relay.Handle()
 
 	n := three()
 	if n != 2 {

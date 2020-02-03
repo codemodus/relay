@@ -2,28 +2,24 @@
 
     go get github.com/codemodus/relay
 
-Package relay provides a simple mechanism for relaying control flow based
-upon whether a checked error is nil or not. This mechanism requires special
-setup within an application due to the behavior of the builtin function
-recover(). Please review the provided examples to ensure correct usage.
+Package relay provides a simple mechanism for relaying control flow based upon
+whether a checked error is nil or not.
 
 ## Usage
 
 ```go
-func CodedTripFn(check func(int, error)) func(int, string, ...interface{})
-func Handle(err error)
+func CodedTripFn(codedCheck func(int, error)) func(int, string, ...interface{})
+func DefaultHandler() func(error)
+func Handle()
 func TripFn(check func(error)) func(string, ...interface{})
 type CodedError
-    func (ce *CodedError) Code() int
     func (ce *CodedError) Error() string
-type Coder
+    func (ce *CodedError) ExitCode() int
+type ExitCoder
 type Relay
     func New(handler ...func(error)) *Relay
     func (r *Relay) Check(err error)
     func (r *Relay) CodedCheck(code int, err error)
-    func (r *Relay) CodedFns() (codedCheck func(int, error), filter func(interface{}))
-    func (r *Relay) Filter(v interface{})
-    func (r *Relay) Fns() (check func(error), filter func(interface{}))
 ```
 
 ### Setup
@@ -35,7 +31,7 @@ import (
 
 func main() {
     r := relay.New()
-    defer func() { r.Filter(recover()) }()
+    defer relay.Handle()
 
     err := fail()
     r.Check(err)
@@ -54,12 +50,12 @@ func main() {
     }
 
     r := relay.New(h)
-    defer func() { r.Filter(recover()) }()
+    defer relay.Handle()
 
     err := fail()
     r.Check(err)
 
-    fmt.Println("should not print")}
+    fmt.Println("should not print")
 
     // Output:
     // always fails
@@ -69,11 +65,11 @@ func main() {
 ### Setup (Eased Usage)
 
 ```go
-    check, filter := relay.New().Fns()
-    defer func() { filter(recover()) }()
+    ck := relay.New().Check
+    defer relay.Handle()
 
     err := fail()
-    check(err)
+    ck(err)
 
     // prints "{cmd_name}: {err_msg}" to stderr
     // calls os.Exit with code set as 1
@@ -83,7 +79,7 @@ func main() {
 
 ```go
     r := relay.New()
-    defer func() { r.Filter(recover()) }()
+    defer relay.Handle()
 
     err := fail()
     r.CodedCheck(3, err)
@@ -95,9 +91,9 @@ func main() {
 ### Setup (Trip Function)
 
 ```go
-    check, filter := relay.New().Fns()
-    trip := relay.TripFn(check)
-    defer func() { filter(recover()) }()
+    ck := relay.New().Check
+    trip := relay.TripFn(ck)
+    defer relay.Handle()
 
     n := three()
     if n != 2 {
