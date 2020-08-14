@@ -140,7 +140,7 @@ https://github.com/golang/go/issues/32437#issuecomment-510214015
 
 ## Documentation
 
-View the [GoDoc](http://godoc.org/github.com/codemodus/relay)
+View the [GoDoc](https://pkg.go.dev/github.com/codemodus/relay)
 
 ## Benchmarks
 
