@@ -6,25 +6,30 @@ import (
 	"path"
 )
 
+// CheckFunc implementations should verify if an error is not nil.
 type CheckFunc func(err error)
 
+// CodedCheckFunc implementations should verify if an error is not nil, and
+// pass through an exit code via wrapping error to final handling.
 type CodedCheckFunc func(code int, err error)
 
+// TripFunc implementations should immediately set off final handling using the
+// format and optional args provided.
 type TripFunc func(format string, args ...interface{})
 
+// TripFunc implementations should immediately set off final handling using the
+// format and optional args provided, and pass through an exit code via wrapping
+// error.
 type CodedTripFunc func(code int, format string, args ...interface{})
 
-// TripFn wraps the provided check function so that it can be called with a
-// formatted error. This enables the immediate tripping of the related relay.
+// TripFn wraps the provided CheckFunc so that it is a TripFunc.
 func TripFn(ck CheckFunc) TripFunc {
 	return func(format string, args ...interface{}) {
 		ck(fmt.Errorf(format, args...))
 	}
 }
 
-// CodedTripFn wraps the provided codedCheck function so that it can be called
-// with an exit code and formatted error. This enables the immediate tripping
-// of the related relay.
+// CodedTripFn wraps the provided CodedCheckFunc so that it is a CodedTripFunc.
 func CodedTripFn(ck CodedCheckFunc) CodedTripFunc {
 	return func(code int, format string, args ...interface{}) {
 		ck(code, fmt.Errorf(format, args...))
@@ -69,6 +74,8 @@ func Handle() {
 	r.h(r.err)
 }
 
+// Fns setups a new Relay and returns both a CheckFunc and TripFunc for caller
+// convenience.
 func Fns(handler ...func(error)) (CheckFunc, TripFunc) {
 	r := New(handler...)
 	c := r.Check
@@ -77,6 +84,8 @@ func Fns(handler ...func(error)) (CheckFunc, TripFunc) {
 	return c, t
 }
 
+// CodedFns setups a new Relay and returns both a CodedCheckFunc and
+// CodedTripFunc or caller convenience.
 func CodedFns(handler ...func(error)) (CodedCheckFunc, CodedTripFunc) {
 	r := New(handler...)
 	c := r.CodedCheck

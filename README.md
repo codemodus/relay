@@ -8,18 +8,24 @@ whether a checked error is nil or not.
 ## Usage
 
 ```go
-func CodedTripFn(codedCheck func(int, error)) func(int, string, ...interface{})
+func CodedFns(handler ...func(error)) (CodedCheckFunc, CodedTripFunc)
 func DefaultHandler() func(error)
+func Fns(handler ...func(error)) (CheckFunc, TripFunc)
 func Handle()
-func TripFn(check func(error)) func(string, ...interface{})
+type CheckFunc
+type CodedCheckFunc
 type CodedError
     func (ce *CodedError) Error() string
     func (ce *CodedError) ExitCode() int
+type CodedTripFunc
+    func CodedTripFn(ck CodedCheckFunc) CodedTripFunc
 type ExitCoder
 type Relay
     func New(handler ...func(error)) *Relay
     func (r *Relay) Check(err error)
     func (r *Relay) CodedCheck(code int, err error)
+type TripFunc
+    func TripFn(ck CheckFunc) TripFunc
 ```
 
 ### Setup
@@ -78,14 +84,14 @@ func main() {
 ### Setup (Coded Check)
 
 ```go
-    r := relay.New()
+    ck := relay.New().CodedCheck
     defer relay.Handle()
 
     err := fail()
-    r.CodedCheck(3, err)
+    ck(3, err)
 
     // prints "{cmd_name}: {err_msg}" to stderr
-    // calls os.Exit with code set as first arg to r.CodedCheck
+    // calls os.Exit with code set as first arg to r.CodedCheck ("ck")
 ```
 
 ### Setup (Trip Function)
@@ -94,6 +100,26 @@ func main() {
     ck := relay.New().Check
     trip := relay.TripFn(ck)
     defer relay.Handle()
+
+    n := three()
+    if n != 2 {
+        trip("must receive %v: %v is invalid", 2, n)
+    }
+
+    fmt.Println("should not print")
+
+    // prints "{cmd_name}: {trip_msg}" to stderr
+    // calls os.Exit with code set as 1
+```
+
+### Setup (Eased Usage - Check and Trip)
+
+```go
+    ck, trip := relay.Fns()
+    defer relay.Handle()
+
+    err := mightFail()
+    ck(err)
 
     n := three()
     if n != 2 {
