@@ -50,15 +50,15 @@ func Example_easedUsage() {
 	// calls os.Exit with code set as 1
 }
 
-func ExampleRelay_CodedCheck() {
-	r := relay.New()
+func Example_exitCode() {
+	ck := relay.New().CodedCheck
 	defer relay.Handle()
 
 	err := fail()
-	r.CodedCheck(3, err)
+	ck(3, err)
 
 	// prints "{cmd_name}: {err_msg}" to stderr
-	// calls os.Exit with code set as first arg to r.CodedCheck
+	// calls os.Exit with code set as first arg to r.CodedCheck ("ck")
 }
 
 func ExampleTripFn() {
@@ -93,10 +93,50 @@ func ExampleCodedTripFn() {
 	// calls os.Exit with code set as first arg to "trip"
 }
 
+func ExampleFns() {
+	ck, trip := relay.Fns()
+	defer relay.Handle()
+
+	err := mightFail()
+	ck(err)
+
+	n := three()
+	if n != 2 {
+		trip("must receive %v: %v is invalid", 2, n)
+	}
+
+	fmt.Println("should not print")
+
+	// prints "{cmd_name}: {trip_msg}" to stderr
+	// calls os.Exit with code set as 1
+}
+
+func ExampleCodedFns() {
+	ck, trip := relay.CodedFns()
+	defer relay.Handle()
+
+	err := mightFail()
+	ck(3, err)
+
+	n := three()
+	if n != 2 {
+		trip(4, "must receive %v: %v is invalid", 2, n)
+	}
+
+	fmt.Println("should not print")
+
+	// prints "{cmd_name}: {trip_msg}" to stderr
+	// calls os.Exit with code set as first arg to "trip"
+}
+
 func three() int {
 	return 3
 }
 
 func fail() error {
 	return errors.New("always fails")
+}
+
+func mightFail() error {
+	return nil
 }
